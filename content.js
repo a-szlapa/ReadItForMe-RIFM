@@ -1,41 +1,58 @@
+let isPlaying = false;
+let currentUtterance = null;
+
 chrome.runtime.onMessage.addListener((message) => {
 
-    if (message.action === "readText") {
+    if (message.action === "toggleRead") {
 
-        const text = message.text;
-
-        if (!text) return;
-
-        // stop previous speech
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-
-        // IMPORTANT: wait for voices (fixes silent bug)
-        let voices = window.speechSynthesis.getVoices();
-
-        if (voices.length === 0) {
-            window.speechSynthesis.onvoiceschanged = () => {
-                window.speechSynthesis.speak(utterance);
-            };
+        if (isPlaying) {
+            stopReading();
         } else {
-            window.speechSynthesis.speak(utterance);
+            readText(message.text);
         }
+
     }
 
     if (message.action === "stopReading") {
-
-        const text = message.text;
-
-        if (!text) return;
-
-        // stop previous speech
-        window.speechSynthesis.cancel();
+        stopReading();
     }
 
-
 });
+
+function readText(text) {
+
+    if (!text) return;
+
+    window.speechSynthesis.cancel();
+
+    currentUtterance = new SpeechSynthesisUtterance(text);
+
+    currentUtterance.rate = 1;
+    currentUtterance.pitch = 1;
+    currentUtterance.volume = 1;
+
+    currentUtterance.onend = () => {
+        isPlaying = false;
+        currentUtterance = null;
+    };
+
+    let voices = window.speechSynthesis.getVoices();
+
+    if (voices.length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.speak(currentUtterance);
+        };
+    } else {
+        window.speechSynthesis.speak(currentUtterance);
+    }
+
+    isPlaying = true;
+}
+
+function stopReading() {
+
+    window.speechSynthesis.cancel();
+
+    isPlaying = false;
+    currentUtterance = null;
+}
